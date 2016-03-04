@@ -174,12 +174,15 @@ void runAlgo(){
   //read acceleration data into 'pos' array
   getAccData();
   
-  cnt++;
+    cnt++;
     for(int i=0;i<3;i++)
       avg[i]+=pos[i];
     if(cnt == 4){
       cnt=0;
       sample_cnt++;
+      for(int i=0;i<3;i++){
+	avg[i]/=4;
+      }
       if(sample_cnt == 1){
         for(int i=0;i<3;i++)
           sample_new[i] = sample_old[i] = avg[i];
@@ -190,7 +193,6 @@ void runAlgo(){
         }
       }
       for(int i=0;i<3;i++){
-        avg[i]/=4;
         max[i] = max(max[i] , avg[i]);
         min[i] = min(min[i] , avg[i]);
       }
@@ -203,17 +205,17 @@ void runAlgo(){
         else 
           active_axis=3;
         threshold = (max[active_axis] + min[active_axis])/2;
-        if(avg[0] + avg[1] + avg[2] > precision){
-          for(int i=0;i<3;i++)
-            sample_new[i] = avg[i];
-        }        
-        if(sample_new[active_axis] < threshold && threshold < sample_old[active_axis]){
-          if(millis() - timerStart > 200){
-            steps++;
-            timerStart = millis();
-            //beep();
-          }
-        }
+      }
+      if(avg[0] + avg[1] + avg[2] > precision){
+         for(int i=0;i<3;i++)
+           sample_new[i] = avg[i];
+      }        
+      if(sample_new[active_axis] < threshold && threshold < sample_old[active_axis]){
+         if(millis() - timerStart > 200){
+           steps++;
+           timerStart = millis();
+           //beep();
+         }
       }
       for(int i=0;i<3;i++)
         avg[i] = 0;
