@@ -46,7 +46,8 @@ int sample_new[3] , sample_old[3] , max[3] , min[3];
 int steps = 0;
 int active_axis=0;
 int threshold;
-int precision;
+int precision=555;
+int timer=0;
 unsigned long timerStart=0;
 
 int pos[3];
@@ -62,6 +63,7 @@ void dmpDataReady() {
 }
 
 void setup() {
+    Serial.begin(9600);
     // join I2C bus (I2Cdev library doesn't do this automatically)
     #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
         Wire.begin();
@@ -77,9 +79,7 @@ void setup() {
 lcd.begin(16, 2);
 // Print a message to the LCD.
 lcd.setCursor(0,0);
-lcd.print("Steps :");
-
-
+lcd.print("Loading...");
     mpu.initialize();
     // load and configure the DMP
     //Serial.println(F("Initializing DMP..."));
@@ -97,7 +97,7 @@ lcd.print("Steps :");
         mpu.setDMPEnabled(true);
 
         // enable Arduino interrupt detection
-        attachInterrupt(0, dmpDataReady, RISING);
+        attachInterrupt(5, dmpDataReady, RISING);
         mpuIntStatus = mpu.getIntStatus();
 
         // set our DMP Ready flag so the main loop() function knows it's okay to use it
@@ -116,6 +116,8 @@ lcd.print("Steps :");
     }
    
     pinMode(BUZZER_PIN, OUTPUT);
+    pinMode(16, OUTPUT);
+    digitalWrite(16, HIGH);
 }
 
 void loop() {
@@ -134,7 +136,8 @@ void loop() {
         // while() loop to immediately process the MPU data
         // .
         // .
-        displayOnLcd();
+        if (timer>200)
+          displayOnLcd();
         }
 
     // reset interrupt flag and get INT_STATUS byte
@@ -161,10 +164,18 @@ void loop() {
         // track FIFO count here in case there is > 1 packet available
         // (this lets us immediately read more without waiting for an interrupt)
         fifoCount -= packetSize;
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////maged start here//////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        runAlgo();
+       if(timer < 200){
+        getAccData();
+       }
+       else if(timer == 200){
+          lcd.setCursor(0,0);
+          lcd.print("Steps :   ");
+          runAlgo();
+       }
+       else{
+       runAlgo();
+       }
+       timer++;
     }
 }
 
@@ -181,7 +192,7 @@ void runAlgo(){
       cnt=0;
       sample_cnt++;
       for(int i=0;i<3;i++){
-	avg[i]/=4;
+        avg[i]/=4;
       }
       if(sample_cnt == 1){
         for(int i=0;i<3;i++)
@@ -205,12 +216,27 @@ void runAlgo(){
         else 
           active_axis=3;
         threshold = (max[active_axis] + min[active_axis])/2;
+        for(int i=0;i<3;i++){
+            max[i]=-1e9 ; min[i]=1e9;
+        }
       }
-      if(avg[0] + avg[1] + avg[2] > precision){
+      if(abs(sample_new[0] - avg[0]) + abs(sample_new[1] - avg[1]) + abs(sample_new[2] - avg[2]) > precision){
          for(int i=0;i<3;i++)
            sample_new[i] = avg[i];
-      }        
-      if(sample_new[active_axis] < threshold && threshold < sample_old[active_axis]){
+      }  
+      
+      //Serial.print("%d , %d , %d         ,%d" ,avg[0] , avg[1] , avg[2] ,    threshold);   
+      Serial.print(avg[0]);
+      Serial.print(",");
+      Serial.print(avg[1]);
+      Serial.print(",");
+      Serial.print(avg[2]);
+      Serial.print(",");
+      Serial.print(threshold);
+      Serial.print(",");
+      Serial.println(steps);
+         
+      if(sample_new[active_axis] < threshold && threshold < sample_old[active_axis] && max[active_axis] - min[active_axis] > precision && max[active_axis] != 1e9){
          if(millis() - timerStart > 200){
            steps++;
            timerStart = millis();
