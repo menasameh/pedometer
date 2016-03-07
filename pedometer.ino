@@ -49,6 +49,10 @@ int threshold;
 int precision=555;
 int timer=0;
 unsigned long timerStart=0;
+float distance=0;
+int sec_2=0;
+int steps_2=0;
+float height=1.87;
 
 int pos[3];
 int avg[3];
@@ -165,17 +169,53 @@ void loop() {
         // (this lets us immediately read more without waiting for an interrupt)
         fifoCount -= packetSize;
        if(timer < 200){
+        
         getAccData();
+        
        }
        else if(timer == 200){
           lcd.setCursor(0,0);
           lcd.print("Steps :   ");
+//          unsigned long r = millis(); 
+//        lcd.setCursor(0,0);
+//        lcd.print("       "); 
           runAlgo();
+//          lcd.setCursor(0,0);
+//        lcd.print(millis()-r);
+//        while(1);
        }
        else{
        runAlgo();
        }
        timer++;
+       sec_2++;
+       if(sec_2*5 == 2000){
+        sec_2=0;
+        if(steps_2 >= 0 && steps_2 <= 2){
+          distance+=(height/5)*steps_2;
+        }
+        else if(steps_2 >= 2 && steps_2 <= 3){
+          distance+=(height/4)*steps_2;
+        }
+         else if(steps_2 >= 3 && steps_2 <= 4){
+          distance+=(height/3)*steps_2;
+        }
+         else if(steps_2 >= 4 && steps_2 <= 5){
+          distance+=(height/2)*steps_2;
+        }
+         else if(steps_2 >= 5 && steps_2 <= 6){
+          distance+=(height/1.2)*steps_2;
+        }
+         else if(steps_2 >= 6 && steps_2 <= 8){
+          distance+=height*steps_2;
+        }
+        else{
+          distance+=height*1.2*steps_2;
+        }
+         lcd.setCursor(0,1);
+         lcd.print(distance);
+        steps_2=0;
+       }
     }
 }
 
@@ -236,9 +276,10 @@ void runAlgo(){
       Serial.print(",");
       Serial.println(steps);
          
-      if(sample_new[active_axis] < threshold && threshold < sample_old[active_axis] && max[active_axis] - min[active_axis] > precision && max[active_axis] != 1e9){
+      if(sample_new[active_axis] < threshold && threshold < sample_old[active_axis]){
          if(millis() - timerStart > 200){
            steps++;
+           steps_2++;
            timerStart = millis();
            //beep();
          }
