@@ -144,7 +144,7 @@ lcd.print("Loading...");
         //Serial.print(devStatus);
         //Serial.println(F(")"));
     }
-   
+    Serial.begin(9600);
     pinMode(BUZZER_PIN, OUTPUT);
     pinMode(16, OUTPUT);
     digitalWrite(16, HIGH);
@@ -166,9 +166,6 @@ void loop() {
         // while() loop to immediately process the MPU data
         // .
         // .
-
-        
-        
     }
     if (timer>200){
           process_input(read_LCD_buttons());
@@ -363,6 +360,12 @@ void getAccData(){
   pos[0] = aaWorld.x;
   pos[1] = aaWorld.y;
   pos[2] = aaWorld.z;
+
+// Serial.print( pos[0]);
+// Serial.print(",");
+// Serial.print( pos[1]);
+// Serial.print(",");
+// Serial.println( pos[2]);
 }
 
 void beep(){
@@ -376,7 +379,7 @@ int read_LCD_buttons()
   adc_key_in = analogRead(0);      // read the value from the sensor 
   // my buttons when read are centered at these valies: 0, 144, 329, 504, 741
   // we add approx 50 to those values and check to see if we are close
- Serial.println(adc_key_in);
+ //Serial.println(adc_key_in);
   if (adc_key_in > 1000){
      button_pressed =15;
      return btnNONE;
@@ -444,16 +447,33 @@ void print_to_lCD()
       lcd.setCursor(3,0);
       lcd.print("Measurement");
       lcd.setCursor(0,1);
-      lcd.print("cals : ");
+      lcd.print("calories : ");
+      lcd.print(cal_sum);
+    }
+    else if(Mpage == 3){
+      lcd.setCursor(3,0);
+      lcd.print("Measurement");
+      lcd.setCursor(0,1);
+      lcd.print("speed : ");
+      lcd.print(speed_sum);
+    }
+    else if(Mpage == 4){
+      lcd.setCursor(0,0);
+      lcd.print("S:");
+      lcd.print(steps);
+      lcd.setCursor(0,1);
+      lcd.print("D:");
+      lcd.print(distance);
+      lcd.setCursor(8,0);
+      lcd.print("V:");
+      lcd.print(speed_sum);
+      lcd.setCursor(8,1);
+      lcd.print("C:");
       lcd.print(cal_sum);
     }
   }
 }
 
-void clear_lcd(){
-  lcd.setCursor(0,1);
-  lcd.print("                ");
-}
 
 void process_input(int input){
   switch(input){
@@ -462,9 +482,9 @@ void process_input(int input){
         Spage = (Spage+1)%2;
       }
       else{
-        Mpage = (Mpage+1)%3;
+        Mpage = (Mpage+1)%5;
       }
-      clear_lcd();
+      lcd.clear();
       break;
     case btnUP:
       if(state == settings){
@@ -493,9 +513,9 @@ void process_input(int input){
         Spage = (Spage-1+2)%2;
       }
       else{
-        Mpage = (Mpage-1+3)%3;
+        Mpage = (Mpage-1+5)%5;
       }
-      clear_lcd();
+      lcd.clear();
       break;
     case btnSELECT:
       state =1;
