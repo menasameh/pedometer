@@ -45,7 +45,7 @@ VectorFloat gravity;    // [x, y, z]            gravity vector
 
 #define MOVING_SIZE 20
 #define SAMPLE_SIZE 50
-#define MAX_MIN_DIFF 2000
+#define MAX_MIN_DIFF 1750
 #define NOW_PREV_DIFF 100
 
 int lcd_key     = 0;
@@ -59,33 +59,33 @@ int adc_key_in  = 0;
 
 #define settings 0
 
-int st[3] , pos[3];
-int samples[3][SAMPLE_SIZE];
-int moving[3][MOVING_SIZE];
-int idx_sample[3];
-int max_min_diff[3];
+long  st[3] , pos[3];
+long  samples[3][SAMPLE_SIZE];
+long  moving[3][MOVING_SIZE];
+long  idx_sample[3];
+long  max_min_diff[3];
 
 int readingsNum = 0, addr = 0, th=200;
 ////////////////////////////////////variables//////////////////////////////////
 
 int state =0,Spage=0,Mpage=0,button_pressed=0;
 
-int timer=0;
-unsigned long timerStart=0;
+int timer = 0;
+unsigned long timerStart = 0 , timerForTwo = 0;
 int sec_2=0;
-int steps_2=0;
+int prevSteps=0;
 float speed_2 , speed_sum=0 , speed_avg=0;
 float stride;
-float cal_2=0  , cal_sum=0;
+float cal_2=0;
 int cnt_2=0;
 
+int steps  , stepsDiff;
 
 
-int steps;
 float height = 1.60;
 float weight = 80;
 float distance=0;
-float cal=0;
+float cal_sum=0; // -> cal_sum
 
 
 
@@ -95,7 +95,7 @@ void dmpDataReady() {
 }
 
 void setup() {
-    Serial.begin(9600);
+    timerForTwo = millis();
     // join I2C bus (I2Cdev library doesn't do this automatically)
     #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
         Wire.begin();
@@ -210,35 +210,76 @@ void loop() {
             runALgo();
           }
        }
+       if(millis() - timerForTwo >= 2000)
+       {
+          stepsDiff = steps - prevSteps;
+          timerForTwo = millis();
+          prevSteps = steps;
+
+          if(stepsDiff >= 0 && stepsDiff <= 2){
+             stride = height/5;
+             
+           }
+           else if(stepsDiff >= 2 && stepsDiff <= 3){
+              stride = height/4;
+           }
+            else if(stepsDiff >= 3 && stepsDiff <= 4){
+             stride = height/3;
+           }
+            else if(stepsDiff >= 4 && stepsDiff <= 5){
+             stride = height/2;
+           }
+            else if(stepsDiff >= 5 && stepsDiff <= 6){
+             stride = height/1.2;
+           }
+            else if(stepsDiff >= 6 && stepsDiff <= 8){
+             stride = height;
+           }
+           else{
+             stride = height*1.2;
+           }
+           distance+=stride*stepsDiff;
+           speed_2 = stepsDiff * stride / 2;
+           if(stepsDiff){
+             cal_2 = speed_2 * weight / 400;
+           }
+           else if(steps > 0){
+             cal_2 = weight / 1800;
+           }
+           cal_sum += cal_2;
+           speed_sum += speed_2;
+           speed_avg = speed_sum / stepsDiff;
+
+       }
        timer++;
 //       sec_2++;
 //       if(sec_2*5 == 2000){
 //        sec_2=0;
-//        if(steps_2 >= 0 && steps_2 <= 2){
+//        if(prevSteps >= 0 && prevSteps <= 2){
 //          stride = height/5;
 //          
 //        }
-//        else if(steps_2 >= 2 && steps_2 <= 3){
+//        else if(prevSteps >= 2 && prevSteps <= 3){
 //           stride = height/4;
 //        }
-//         else if(steps_2 >= 3 && steps_2 <= 4){
+//         else if(prevSteps >= 3 && prevSteps <= 4){
 //          stride = height/3;
 //        }
-//         else if(steps_2 >= 4 && steps_2 <= 5){
+//         else if(prevSteps >= 4 && prevSteps <= 5){
 //          stride = height/2;
 //        }
-//         else if(steps_2 >= 5 && steps_2 <= 6){
+//         else if(prevSteps >= 5 && prevSteps <= 6){
 //          stride = height/1.2;
 //        }
-//         else if(steps_2 >= 6 && steps_2 <= 8){
+//         else if(prevSteps >= 6 && prevSteps <= 8){
 //          stride = height;
 //        }
 //        else{
 //          stride = height*1.2;
 //        }
-//        distance+=stride*steps_2;
-//        speed_2 = steps_2 * stride / 2;
-//        if(steps_2){
+//        distance+=stride*prevSteps;
+//        speed_2 = prevSteps * stride / 2;
+//        if(prevSteps){
 //          cal_2 = speed_2 * weight / 400;
 //        }
 //        else{
@@ -249,7 +290,7 @@ void loop() {
 //        speed_avg = speed_sum / cnt_2;
 //        // lcd.setCursor(0,1);
 //        // lcd.print(distance);
-//        steps_2=0;
+//        prevSteps=0;
 //        cnt_2++;
 //       }
     }
@@ -302,7 +343,7 @@ void InternalRunAlgo(int axis)
       mi = min(mi , samples[axis][i]);
     }
     max_min_diff[axis] = ma - mi;
-    int threshold = (ma + mi) / 2;
+    long threshold = (ma + mi) / 2;
     for(int i = 1;i < SAMPLE_SIZE;++i)
     {
       if(samples[axis][i - 1] >= threshold && samples[axis][i] <= threshold && ma - mi > MAX_MIN_DIFF)
@@ -404,7 +445,7 @@ void print_to_lCD()
       lcd.print("Measurement");
       lcd.setCursor(0,1);
       lcd.print("cals : ");
-      lcd.print(cal);
+      lcd.print(cal_sum);
     }
   }
 }
