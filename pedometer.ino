@@ -53,6 +53,11 @@ float distance=0;
 int sec_2=0;
 int steps_2=0;
 float height=1.87;
+float speed_2 , speed_sum=0 , speed_avg=0;
+float stride;
+float cal_2=0  , cal_sum=0;
+int weight = 1800;
+int cnt_2=0;
 
 int pos[3];
 int avg[3];
@@ -185,36 +190,49 @@ void loop() {
 //        while(1);
        }
        else{
-       runAlgo();
+         runAlgo();
        }
        timer++;
        sec_2++;
        if(sec_2*5 == 2000){
         sec_2=0;
         if(steps_2 >= 0 && steps_2 <= 2){
-          distance+=(height/5)*steps_2;
+          stride = height/5;
+          
         }
         else if(steps_2 >= 2 && steps_2 <= 3){
-          distance+=(height/4)*steps_2;
+           stride = height/4;
         }
          else if(steps_2 >= 3 && steps_2 <= 4){
-          distance+=(height/3)*steps_2;
+          stride = height/3;
         }
          else if(steps_2 >= 4 && steps_2 <= 5){
-          distance+=(height/2)*steps_2;
+          stride = height/2;
         }
          else if(steps_2 >= 5 && steps_2 <= 6){
-          distance+=(height/1.2)*steps_2;
+          stride = height/1.2;
         }
          else if(steps_2 >= 6 && steps_2 <= 8){
-          distance+=height*steps_2;
+          stride = height;
         }
         else{
-          distance+=height*1.2*steps_2;
+          stride = height*1.2;
         }
-         lcd.setCursor(0,1);
-         lcd.print(distance);
+        distance+=stride*steps_2;
+        speed_2 = steps_2 * stride / 2;
+        if(steps_2){
+          cal_2 = speed_2 * weight / 400;
+        }
+        else{
+          cal_2 = weight / 1800;
+        }
+        cal_sum += cal_2;
+        speed_sum += speed_2;
+        speed_avg = speed_sum / cnt_2;
+        // lcd.setCursor(0,1);
+        // lcd.print(distance);
         steps_2=0;
+        cnt_2++;
        }
     }
 }
@@ -231,9 +249,9 @@ void runAlgo(){
     if(cnt == 4){
       cnt=0;
       sample_cnt++;
-      for(int i=0;i<3;i++){
-        avg[i]/=4;
-      }
+      // for(int i=0;i<3;i++){ // edited 
+      //   avg[i]/=4;
+      // }
       if(sample_cnt == 1){
         for(int i=0;i<3;i++)
           sample_new[i] = sample_old[i] = avg[i];
@@ -276,12 +294,12 @@ void runAlgo(){
       Serial.print(",");
       Serial.println(steps);
          
-      if(sample_new[active_axis] < threshold && threshold < sample_old[active_axis]){
-         if(millis() - timerStart > 200){
+      if(sample_new[active_axis] < threshold && threshold < sample_old[active_axis] && threshold > 800){ // edited 
+         if(millis() - timerStart > 12000){ // edited from 200
            steps++;
            steps_2++;
            timerStart = millis();
-           //beep();
+           
          }
       }
       for(int i=0;i<3;i++)
@@ -313,5 +331,4 @@ void displayOnLcd(){
   lcd.setCursor(7,0);
   lcd.print(steps);
 }
-
 
